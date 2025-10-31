@@ -4,7 +4,7 @@
 
  
 
-![image]([https://hackmd.io/_uploads/ryAUeJk-xe.png](https://github.com/powenko/IoT_html_dashboard/blob/master/1.png?raw=true))
+![image](https://github.com/powenko/IoT_html_dashboard/blob/master/1.png?raw=true)
 ---
 
 ## 📘 Overview
