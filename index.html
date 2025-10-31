@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  />
+  <title>IoT_html_dashboard – Demo</title>
+
+  <!-- Chart.js (for line & doughnut gauge) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" integrity="sha384-1p3wE5I5wV7d9m5mQ6g8p2h2l2m8nq5e8zq8j4r4K7lXQFZVYc9r0p3uLw8uWZqJ" crossorigin="anonymous"></script>
+
+  <!-- MQTT over WebSocket (Eclipse Paho) -->
+  <script src="https://unpkg.com/paho-mqtt@1.3.2/paho-mqtt-min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f1218;
+      --card: #151a21;
+      --text: #e9eef5;
+      --muted: #9aa4b2;
+      --accent: #4ea8ff;
+      --good: #2ecc71;
+      --warn: #f1c40f;
+      --bad: #e74c3c;
+      --border: #212734;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 2fr 1.2fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 960px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .kpi {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .kpi-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .kpi-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .dot-good { background: var(--good); }
+    .dot-warn { background: var(--warn); }
+    .dot-bad  { background: var(--bad);  }
+
+    .footer {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 520px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    button, select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    code.inline {
+      background: #0b0e13;
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: #cdd9e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="title">IoT_html_dashboard – HTML5 Real-Time Demo</div>
+        <div class="subtitle">Pure Front-End • Chart.js • MQTT (WebSocket) • Responsive UI</div>
+      </div>
+      <div class="toolbar">
+        <span class="pill" id="mode-pill">Mode: Simulated</span>
+        <button id="toggle-mode">Toggle Mode</button>
+        <select id="sim-speed">
+          <option value="1000">Sim Speed: 1s</option>
+          <option value="500">Sim Speed: 0.5s</option>
+          <option value="200">Sim Speed: 0.2s</option>
+        </select>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- Left column: KPIs -->
+      <section class="card">
+        <h3>Realtime Metrics</h3>
+        <div class="kpi">
+          <div class="kpi-item">
+            <div class="kpi-label">Temperature (°C)</div>
+            <div class="kpi-value" id="kpi-temp">--</div>
+            <div class="hint">Topic: <code class="inline" id="topic-temp">/temperature</code></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Humidity (%)</div>
+            <div class="kpi-value" id="kpi-humi">--</div>
+            <div class="hint">Topic: <code class="inline" id="topic-humi">/humidity</code></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Pressure (hPa)</div>
+            <div class="kpi-value" id="kpi-pres">--</div>
+            <div class="hint">Topic: <code class="inline" id="topic-pres">/pressure</code></div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Device Status</div>
+            <div>
+              <span class="status-dot dot-bad" id="status-dot"></span>
+              <span id="status-text">Disconnected</span>
+            </div>
+            <div class="hint">Broker: <code class="inline" id="broker-hint">n/a</code></div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Last update: <span id="last-update">—</span></span>
+          <span>Data source: <span id="data-source">Simulated</span></span>
+        </div>
+      </section>
+
+      <!-- Center column: Line chart -->
+      <section class="card">
+        <h3>Environmental Trend (Temperature)</h3>
+        <canvas id="lineChart" height="140"></canvas>
+      </section>
+
+      <!-- Right column: Gauge (Humidity) -->
+      <section class="card">
+        <h3>Humidity Gauge</h3>
+        <canvas id="gaugeChart" height="220"></canvas>
+        <div class="footer">
+          <span class="hint">Green: 35–65% (Comfort)</span>
+          <span class="hint">Yellow: 20–35% / 65–80%</span>
+          <span class="hint">Red: &lt;20% / &gt;80%</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /**
+     * === Configuration ===
+     * useSimulatedData: true -> generate local random sensor values (no network).
+     * Set to false to enable MQTT over WebSocket using Eclipse Paho.
+     */
+    const CONFIG = {
+      useSimulatedData: true, // <-- switch to false to use MQTT
+      mqtt: {
+        // Example public broker (for demo only; evaluate security & rate limits):
+        // HiveMQ WebSocket: wss://broker.hivemq.com:8884/mqtt
+        host: "broker.hivemq.com",
+        port: 8884,
+        path: "/mqtt",
+        useTLS: true,
+        clientId: "IoT_html_dashboard_" + Math.random().toString(16).slice(2),
+        // Example topics; adjust to your device schema
+        topics: {
+          temperature: "iot_html_dashboard/demo/temperature",
+          humidity:    "iot_html_dashboard/demo/humidity",
+          pressure:    "iot_html_dashboard/demo/pressure"
+        }
+      },
+      ui: {
+        maxPoints: 60 // number of points shown in the line chart
+      }
+    };
+
+    // ====== Utilities ======
+    const $ = (id) => document.getElementById(id);
+    const formatTs = (d) => d.toLocaleString();
+
+    function setStatus(connected) {
+      const dot = $("status-dot");
+      const text = $("status-text");
+      if (connected) {
+        dot.classList.remove("dot-bad");
+        dot.classList.add("dot-good");
+        text.textContent = "Connected";
+      } else {
+        dot.classList.remove("dot-good");
+        dot.classList.add("dot-bad");
+        text.textContent = "Disconnected";
+      }
+    }
+
+    function updateKPIs({ t = null, h = null, p = null }) {
+      if (t !== null) $("kpi-temp").textContent = t.toFixed(1);
+      if (h !== null) $("kpi-humi").textContent = h.toFixed(0);
+      if (p !== null) $("kpi-pres").textContent = p.toFixed(1);
+      $("last-update").textContent = formatTs(new Date());
+    }
+
+    // ====== Charts ======
+    const lineCtx = $("lineChart").getContext("2d");
+    const gaugeCtx = $("gaugeChart").getContext("2d");
+
+    // Temperature line series
+    const lineData = {
+      labels: [],
+      datasets: [{
+        label: "Temperature (°C)",
+        data: [],
+        fill: false,
+        tension: 0.25,
+        borderWidth: 2,
+        pointRadius: 0
+      }]
+    };
+
+    const lineChart = new Chart(lineCtx, {
+      type: "line",
+      data: lineData,
+      options: {
+        animation: false,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            ticks: { display: false },
+            grid: { display: false }
+          },
+          y: {
+            suggestedMin: 0,
+            suggestedMax: 50
+          }
+        },
+        plugins: {
+          legend: { display: true },
+          tooltip: { enabled: true }
+        }
+      }
+    });
+
+    // Humidity semicircle gauge using doughnut
+    function gaugeSegmentsFor(value) {
+      // value 0..100 -> split into three logical zones for coloring guidance
+      // We draw a single-value "filled" arc and the remaining as transparent
+      const v = Math.max(0, Math.min(100, value));
+      return [v, 100 - v];
+    }
+
+    const gaugeChart = new Chart(gaugeCtx, {
+      type: "doughnut",
+      data: {
+        labels: ["Humidity", "Remaining"],
+        datasets: [{
+          data: gaugeSegmentsFor(0),
+          borderWidth: 0,
+          cutout: "70%"
+        }]
+      },
+      options: {
+        rotation: -90 * (Math.PI / 180),      // start at top
+        circumference: 180 * (Math.PI / 180), // semicircle
+        responsive: true,
+        animation: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
+      },
+      plugins: [{
+        id: "gaugeText",
+        afterDraw(chart, args, opts) {
+          const { ctx, chartArea } = chart;
+          const dataset = chart.data.datasets[0];
+          const value = dataset.data[0] || 0;
+
+          // Dynamic color: comfort range 35–65 (green), caution (yellow), alert (red)
+          let color = getHumidityColor(value);
+
+          // Center text
+          ctx.save();
+          ctx.font = "bold 28px system-ui, -apple-system, Segoe UI, Roboto";
+          ctx.fillStyle = color;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const cx = (chartArea.left + chartArea.right) / 2;
+          const cy = chartArea.bottom - 20; // push slightly down in semicircle
+          ctx.fillText(`${Math.round(value)}%`, cx, cy);
+
+          // Draw tick arc background zones (optional visual cue)
+          const radius = Math.min(chartArea.width, chartArea.height) / 1.8;
+          const start = -Math.PI; // left
+          const end = 0;          // right
+          ctx.lineWidth = 8;
+
+          // zones: [0–0.2] red, [0.2–0.35] yellow, [0.35–0.65] green, [0.65–0.8] yellow, [0.8–1] red
+          drawZone(ctx, cx, cy, radius, start, start + Math.PI*0.2, "#e74c3c33");
+          drawZone(ctx, cx, cy, radius, start + Math.PI*0.2, start + Math.PI*0.35, "#f1c40f33");
+          drawZone(ctx, cx, cy, radius, start + Math.PI*0.35, start + Math.PI*0.65, "#2ecc7133");
+          drawZone(ctx, cx, cy, radius, start + Math.PI*0.65, start + Math.PI*0.8, "#f1c40f33");
+          drawZone(ctx, cx, cy, radius, start + Math.PI*0.8, end, "#e74c3c33");
+          ctx.restore();
+        }
+      }]
+    });
+
+    function drawZone(ctx, cx, cy, r, a0, a1, color) {
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.arc(cx, cy, r, a0, a1);
+      ctx.stroke();
+    }
+
+    function getHumidityColor(h) {
+      if (h < 20 || h > 80) return "#e74c3c";
+      if ((h >= 20 && h < 35) || (h > 65 && h <= 80)) return "#f1c40f";
+      return "#2ecc71";
+    }
+
+    function setGauge(value) {
+      const ds = gaugeChart.data.datasets[0];
+      ds.data = gaugeSegmentsFor(value);
+      // tint the filled arc according to range
+      ds.backgroundColor = [getHumidityColor(value), "rgba(255,255,255,0.08)"];
+      gaugeChart.update();
+    }
+
+    function pushTemperaturePoint(t) {
+      const labels = lineChart.data.labels;
+      const data = lineChart.data.datasets[0].data;
+      const ts = new Date().toLocaleTimeString();
+
+      labels.push(ts);
+      data.push(t);
+
+      if (labels.length > CONFIG.ui.maxPoints) {
+        labels.shift();
+        data.shift();
+      }
+
+      lineChart.update();
+    }
+
+    // ====== Data Flow: Simulated vs MQTT ======
+    let simTimer = null;
+
+    function startSimulation(intervalMs = 1000) {
+      stopSimulation();
+      $("data-source").textContent = "Simulated";
+      $("mode-pill").textContent = "Mode: Simulated";
+      $("broker-hint").textContent = "n/a";
+      $("topic-temp").textContent = "/temperature (sim)";
+      $("topic-humi").textContent = "/humidity (sim)";
+      $("topic-pres").textContent = "/pressure (sim)";
+      setStatus(true);
+
+      let temp = 24.0;
+      let humi = 55.0;
+      let pres = 1013.2;
+
+      const jitter = (base, j) => base + (Math.random() * j * 2 - j);
+
+      simTimer = setInterval(() => {
+        temp = Math.max(18, Math.min(35, jitter(temp, 0.3)));
+        humi = Math.max(10, Math.min(90, jitter(humi, 1.2)));
+        pres = Math.max(980, Math.min(1040, jitter(pres, 0.4)));
+
+        pushTemperaturePoint(temp);
+        setGauge(humi);
+        updateKPIs({ t: temp, h: humi, p: pres });
+      }, intervalMs);
+    }
+
+    function stopSimulation() {
+      if (simTimer) {
+        clearInterval(simTimer);
+        simTimer = null;
+      }
+    }
+
+    // MQTT setup
+    let mqttClient = null;
+
+    function startMQTT() {
+      stopSimulation();
+      $("data-source").textContent = "MQTT (WebSocket)";
+      $("mode-pill").textContent = "Mode: MQTT";
+      $("broker-hint").textContent = `${CONFIG.mqtt.useTLS ? "wss" : "ws"}://${CONFIG.mqtt.host}:${CONFIG.mqtt.port}${CONFIG.mqtt.path}`;
+      $("topic-temp").textContent = CONFIG.mqtt.topics.temperature;
+      $("topic-humi").textContent = CONFIG.mqtt.topics.humidity;
+      $("topic-pres").textContent = CONFIG.mqtt.topics.pressure;
+
+      // Paho client
+      mqttClient = new Paho.MQTT.Client(
+        CONFIG.mqtt.host,
+        Number(CONFIG.mqtt.port),
+        CONFIG.mqtt.path,
+        CONFIG.mqtt.clientId
+      );
+
+      mqttClient.onConnectionLost = (resp) => {
+        setStatus(false);
+        console.warn("MQTT connection lost:", resp.errorMessage);
+      };
+
+      mqttClient.onMessageArrived = (message) => {
+        try {
+          // Expect numeric payloads; allow JSON {value: number} too
+          const topic = message.destinationName;
+          let payload = message.payloadString;
+          let val = null;
+
+          try {
+            const obj = JSON.parse(payload);
+            if (obj && typeof obj.value === "number") {
+              val = obj.value;
+            }
+          } catch (_) {
+            const n = Number(payload);
+            if (!Number.isNaN(n)) val = n;
+          }
+
+          if (val === null) return;
+
+          if (topic === CONFIG.mqtt.topics.temperature) {
+            pushTemperaturePoint(val);
+            updateKPIs({ t: val });
+          } else if (topic === CONFIG.mqtt.topics.humidity) {
+            setGauge(val);
+            updateKPIs({ h: val });
+          } else if (topic === CONFIG.mqtt.topics.pressure) {
+            updateKPIs({ p: val });
+          }
+        } catch (e) {
+          console.error("Message handling error:", e);
+        }
+      };
+
+      const useTLS = !!CONFIG.mqtt.useTLS;
+      mqttClient.connect({
+        useSSL: useTLS,
+        timeout: 6,
+        onSuccess: () => {
+          setStatus(true);
+          // Subscribe topics
+          Object.values(CONFIG.mqtt.topics).forEach((t) => {
+            mqttClient.subscribe(t, { qos: 0 });
+          });
+        },
+        onFailure: (err) => {
+          setStatus(false);
+          console.error("MQTT connect failed:", err);
+        }
+      });
+    }
+
+    function stopMQTT() {
+      if (mqttClient && mqttClient.isConnected()) {
+        mqttClient.disconnect();
+      }
+      mqttClient = null;
+    }
+
+    // ====== UI bindings ======
+    $("toggle-mode").addEventListener("click", () => {
+      CONFIG.useSimulatedData = !CONFIG.useSimulatedData;
+      if (CONFIG.useSimulatedData) {
+        stopMQTT();
+        startSimulation(Number($("sim-speed").value));
+      } else {
+        startMQTT();
+      }
+    });
+
+    $("sim-speed").addEventListener("change", (e) => {
+      if (CONFIG.useSimulatedData) {
+        startSimulation(Number(e.target.value));
+      }
+    });
+
+    // Initialize
+    window.addEventListener("load", () => {
+      if (CONFIG.useSimulatedData) {
+        startSimulation(Number($("sim-speed").value));
+      } else {
+        startMQTT();
+      }
+    });
+  </script>
+</body>
+</html>
