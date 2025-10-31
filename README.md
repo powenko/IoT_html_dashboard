@@ -1,5 +1,138 @@
 # IoT_html_dashboard
 
+**An HTML5-Based IoT Real-Time Data Dashboard**
+
+---
+
+## 📘 Overview
+
+`IoT_html_dashboard` is a lightweight **IoT (Internet of Things) data visualization dashboard** built entirely with **HTML, CSS, and JavaScript**.
+It displays real-time sensor data — such as temperature, humidity, pressure, and light levels — directly in the browser.
+The dashboard supports data sources via **MQTT**, **WebSocket**, or **REST API**, and renders interactive charts and gauges in real time.
+
+Key characteristics:
+
+* Pure front-end solution (no backend framework required)
+* Runs directly in a web browser or on static hosting (e.g., GitHub Pages)
+* Modular and easily extendable for different IoT systems and data formats
+
+---
+
+## 🚀 Features
+
+* **Real-time Data Updates**: Supports MQTT or WebSocket for live sensor data
+* **Customizable Dashboard Components**: Modular design for various chart types and gauge widgets
+* **Multiple Data Sources**: REST API / MQTT / JSON file support
+* **Responsive Design**: Works across desktops, tablets, and mobile devices
+* **Lightweight Deployment**: Runs directly on static web servers or GitHub Pages
+
+---
+
+## 🧩 Project Structure
+
+```
+IoT_html_dashboard/
+├── index.html              # Main dashboard page
+├── css/
+│   ├── style.css           # Core styling
+│   └── theme-dark.css      # Dark mode theme
+├── js/
+│   ├── main.js             # Core logic and event handling
+│   ├── mqtt.js             # MQTT communication module (optional)
+│   ├── chart.js            # Chart.js integration
+│   └── config.js           # Configuration (API endpoints, themes, widgets)
+├── assets/
+│   ├── icons/              # UI icons
+│   └── fonts/              # Font files
+└── data/
+    └── sample_data.json    # Example sensor data
+```
+
+---
+
+## ⚙️ Installation & Usage
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/IoT_html_dashboard.git
+cd IoT_html_dashboard
+```
+
+### 2. Run a Local Server (optional)
+
+If you need to test MQTT or WebSocket connections:
+
+```bash
+# Run a simple local server using Python
+python3 -m http.server 8080
+```
+
+Then open your browser at:
+
+```
+http://localhost:8080
+```
+
+### 3. Deploy on GitHub Pages
+
+* Go to **Repository Settings → Pages**
+* Select the `main` branch and the `/ (root)` folder
+* Your dashboard will be available at
+  `https://yourusername.github.io/IoT_html_dashboard/`
+
+---
+
+## 🧠 Technical Details
+
+| Technology                  | Description                                                      |
+| --------------------------- | ---------------------------------------------------------------- |
+| **HTML5 / CSS3**            | Layout built using Flexbox and Grid; responsive design           |
+| **JavaScript (ES6+)**       | Modular code structure for dynamic updates                       |
+| **Chart.js**                | Used for drawing line charts, pie charts, and gauge-style meters |
+| **MQTT.js / WebSocket API** | Enables real-time IoT data streaming                             |
+| **JSON Configuration**      | Centralized dashboard and theme settings                         |
+
+---
+
+## 📊 Example Dashboard Layout
+
+The default `index.html` includes:
+
+* **Left Panel**: Real-time temperature and humidity cards
+* **Center Panel**: Environmental data trend line chart
+* **Right Panel**: Device status gauges
+
+> To connect to real IoT devices, update the MQTT broker or REST API URLs in `config.js`.
+
+---
+
+## 🧱 Roadmap
+
+* [ ] Dark/Light theme toggle
+* [ ] WebSocket and Grafana integration example
+* [ ] JSON configuration auto-generator
+* [ ] Drag-and-drop widget arrangement
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 👨‍💻 Author
+
+**Ko Lao-Shih (小柯老師)**
+Specialties: IoT Systems Integration, Front-End Web Development, Embedded Data Visualization
+Contact: `example@email.com`
+
+---
+
+
+# IoT_html_dashboard
+
 **以 HTML5 建構的 IoT 資料即時儀錶板**
 
 ---
